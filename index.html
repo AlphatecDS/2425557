@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculadora de Custos de Infraestrutura</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #1c2128;
+      --border: #30363d;
+      --border-hover: #484f58;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --accent: #2f81f7;
+      --accent-glow: rgba(47, 129, 247, 0.15);
+      --green: #3fb950;
+      --green-glow: rgba(63, 185, 80, 0.12);
+      --yellow: #d29922;
+      --red: #f85149;
+      --purple: #bc8cff;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem 1rem 4rem;
+    }
+
+    /* ─── Background grid ─── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% 0%, rgba(47,129,247,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(188,140,255,0.06) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    /* ─── Header ─── */
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+    header .badge {
+      display: inline-block;
+      background: var(--accent-glow);
+      border: 1px solid rgba(47,129,247,0.3);
+      color: var(--accent);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.3rem 0.8rem;
+      border-radius: 50px;
+      margin-bottom: 1rem;
+    }
+    header h1 {
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 800;
+      background: linear-gradient(135deg, #e6edf3 0%, #8b949e 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.2;
+      margin-bottom: 0.5rem;
+    }
+    header p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    /* ─── Card ─── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+      transition: border-color 0.2s;
+    }
+    .card:hover { border-color: var(--border-hover); }
+
+    /* ─── Conversion Bar ─── */
+    .conversion-bar {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .conversion-bar label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+    .conversion-bar .rate-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.4rem 0.75rem;
+      flex: 1;
+      min-width: 200px;
+    }
+    .conversion-bar .rate-group span {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+    .conversion-bar input[type="number"] {
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--accent);
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      width: 90px;
+      text-align: right;
+    }
+    .conversion-bar .period-toggle {
+      display: flex;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    .conversion-bar .period-toggle button {
+      padding: 0.45rem 1rem;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .conversion-bar .period-toggle button.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    /* ─── Section title ─── */
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 1rem;
+    }
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ─── Items list ─── */
+    #items-list { display: flex; flex-direction: column; gap: 0.6rem; }
+
+    .item-row {
+      display: grid;
+      grid-template-columns: 1fr 120px 90px 90px 36px;
+      gap: 0.5rem;
+      align-items: center;
+      animation: slideIn 0.2s ease;
+    }
+
+    /* ─── Hours sub-row ─── */
+    .hour-row {
+      display: none;
+      grid-column: 1 / -1;
+      grid-template-columns: auto 80px auto 70px auto 90px;
+      align-items: center;
+      gap: 0.4rem 0.6rem;
+      background: rgba(47,129,247,0.06);
+      border: 1px solid rgba(47,129,247,0.2);
+      border-radius: var(--radius-sm);
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      animation: slideIn 0.15s ease;
+    }
+    .hour-row.visible { display: grid; }
+    .hour-row label { white-space: nowrap; font-weight: 500; }
+    .hour-row input[type=number] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--accent);
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 0.3rem 0.5rem;
+      width: 100%;
+      outline: none;
+      text-align: center;
+    }
+    .hour-row input[type=number]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-glow);
+    }
+    .hour-row .total-hours {
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 0.82rem;
+      background: rgba(47,129,247,0.1);
+      border-radius: 6px;
+      padding: 0.3rem 0.6rem;
+      white-space: nowrap;
+    }
+
+    /* wrapper so hour-row sits inside the item block */
+    .item-block {
+      display: contents;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .item-row input, .item-row select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.875rem;
+      padding: 0.55rem 0.75rem;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .item-row input:focus, .item-row select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    .item-row select { cursor: pointer; }
+
+    .currency-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+    }
+    .currency-badge.brl { background: rgba(63,185,80,0.15); color: var(--green); }
+    .currency-badge.usd { background: rgba(47,129,247,0.15); color: var(--accent); }
+
+    .item-row .period-select { font-size: 0.8rem; }
+
+    .btn-remove {
+      background: none;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      cursor: pointer;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .btn-remove:hover { border-color: var(--red); color: var(--red); background: rgba(248,81,73,0.08); }
+
+    /* ─── Add button ─── */
+    .btn-add {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: none;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.875rem;
+      padding: 0.65rem 1rem;
+      width: 100%;
+      margin-top: 0.75rem;
+      transition: all 0.15s;
+    }
+    .btn-add:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-glow);
+    }
+    .btn-add svg { flex-shrink: 0; }
+
+    /* ─── Totals ─── */
+    .totals-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+    }
+    .total-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      transition: border-color 0.2s;
+    }
+    .total-card:hover { border-color: var(--border-hover); }
+    .total-card .tc-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+    .total-card .tc-value {
+      font-size: 1.45rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .total-card .tc-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .total-card.brl-card { border-color: rgba(63,185,80,0.25); }
+    .total-card.brl-card .tc-value { color: var(--green); }
+    .total-card.usd-card { border-color: rgba(47,129,247,0.25); }
+    .total-card.usd-card .tc-value { color: var(--accent); }
+    .total-card.annual-card { border-color: rgba(188,140,255,0.25); }
+    .total-card.annual-card .tc-value { color: var(--purple); }
+
+    /* ─── Breakdown ─── */
+    .breakdown-list { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.5rem; }
+    .breakdown-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.55rem 0.75rem;
+      border-radius: var(--radius-sm);
+      background: var(--surface2);
+      font-size: 0.85rem;
+      transition: background 0.15s;
+    }
+    .breakdown-item:hover { background: #222830; }
+    .breakdown-item .bi-name { color: var(--text); font-weight: 500; }
+    .breakdown-item .bi-val  { color: var(--text-muted); font-weight: 600; }
+    .breakdown-item .bi-brl  { color: var(--green); font-weight: 700; font-size: 0.9rem; }
+
+    /* ─── Column headers ─── */
+    .col-headers {
+      display: grid;
+      grid-template-columns: 1fr 120px 90px 90px 36px;
+      gap: 0.5rem;
+      padding: 0 0 0.4rem;
+    }
+    .col-headers span {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-muted);
+      padding: 0 0.75rem;
+    }
+
+    /* item wrapper for stacking row + hour-row */
+    .item-wrap {
+      display: grid;
+      grid-template-columns: 1fr 120px 90px 90px 36px;
+      gap: 0.5rem 0.5rem;
+      row-gap: 0.35rem;
+    }
+
+    /* ─── Capacity card ─── */
+    .cap-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 0.9rem;
+      margin-bottom: 1.25rem;
+    }
+    .cap-stat {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      transition: border-color 0.2s;
+    }
+    .cap-stat:hover { border-color: var(--border-hover); }
+    .cap-stat.gpu  { border-color: rgba(188,140,255,0.3); }
+    .cap-stat.vps  { border-color: rgba(47,129,247,0.3); }
+    .cap-stat.stor { border-color: rgba(210,153,34,0.3); }
+    .cap-stat.cam  { border-color: rgba(63,185,80,0.3); }
+    .cap-stat .cs-icon { font-size: 1.3rem; margin-bottom: 0.2rem; }
+    .cap-stat .cs-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+    .cap-stat .cs-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+    .cap-stat.gpu  .cs-value { color: var(--purple); }
+    .cap-stat.vps  .cs-value { color: var(--accent); }
+    .cap-stat.stor .cs-value { color: var(--yellow); }
+    .cap-stat.cam  .cs-value { color: var(--green); }
+    .cap-stat .cs-sub {
+      font-size: 0.73rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .cap-inputs {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .cap-input-group {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.6rem 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .cap-input-group label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      white-space: nowrap;
+      flex: 1;
+    }
+    .cap-input-group input {
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--accent);
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      width: 70px;
+      text-align: right;
+    }
+    .cap-input-group .unit {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    /* capacity bar */
+    .cap-bar-wrap { margin-top: 0.5rem; }
+    .cap-bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 0.3rem;
+      font-weight: 600;
+    }
+    .cap-bar-track {
+      height: 7px;
+      background: var(--surface);
+      border-radius: 99px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .cap-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.4s ease;
+    }
+    .cap-bar-fill.gpu  { background: linear-gradient(90deg, var(--purple), #e879f9); }
+    .cap-bar-fill.vps  { background: linear-gradient(90deg, var(--accent),  #60a5fa); }
+    .cap-bar-fill.stor { background: linear-gradient(90deg, var(--yellow),  #fbbf24); }
+
+    /* ─── Team card ─── */
+    .team-col-headers {
+      display: grid;
+      grid-template-columns: 1fr 160px 120px 36px;
+      gap: 0.5rem;
+      padding: 0 0 0.4rem;
+    }
+    .team-col-headers span {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-muted);
+      padding: 0 0.75rem;
+    }
+    #team-list { display: flex; flex-direction: column; gap: 0.5rem; }
+    .team-row {
+      display: grid;
+      grid-template-columns: 1fr 160px 120px 36px;
+      gap: 0.5rem;
+      align-items: center;
+      animation: slideIn 0.2s ease;
+    }
+    .team-row input, .team-row select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.875rem;
+      padding: 0.55rem 0.75rem;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .team-row input:focus, .team-row select:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px var(--green-glow);
+    }
+    .team-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 1rem;
+      padding: 0.65rem 0.85rem;
+      background: rgba(63,185,80,0.07);
+      border: 1px solid rgba(63,185,80,0.2);
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+    }
+    .team-summary .ts-label { color: var(--text-muted); font-weight: 500; }
+    .team-summary .ts-value { color: var(--green); font-weight: 800; font-size: 1rem; }
+    .team-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(63,185,80,0.12);
+      color: var(--green);
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.2rem 0.55rem;
+      border-radius: 50px;
+      margin-left: 0.5rem;
+    }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 600px) {
+      .item-row {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto;
+      }
+      .item-row input[placeholder="Nome do item"] { grid-column: 1 / -1; }
+      .col-headers { display: none; }
+      .conversion-bar { flex-direction: column; align-items: stretch; }
+    }
+
+    /* number input hide arrows */
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+    input[type=number] { -moz-appearance: textfield; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="badge">💸 Infraestrutura Cloud</div>
+    <h1>Calculadora de Custos</h1>
+    <p>Gerencie custos em BRL e USD com conversão automática</p>
+  </header>
+
+  <!-- Conversion settings -->
+  <div class="card">
+    <div class="section-label">⚙️ Configurações</div>
+    <div class="conversion-bar">
+      <label>Câmbio USD → BRL</label>
+      <div class="rate-group">
+        <span>1 USD =</span>
+        <input type="number" id="exchange-rate" value="7.00" step="0.01" min="0.01" />
+        <span>BRL</span>
+      </div>
+      <label style="margin-left:auto">Lucro:</label>
+      <div class="rate-group" style="min-width:120px;flex:unset">
+        <input type="number" id="profit-pct" value="10" step="1" min="0" max="999" />
+        <span>%</span>
+      </div>
+      <label>Imposto:</label>
+      <div class="rate-group" style="min-width:120px;flex:unset">
+        <input type="number" id="tax-pct" value="15" step="1" min="0" max="100" />
+        <span>%</span>
+      </div>
+      <label>Exibir por:</label>
+      <div class="period-toggle">
+        <button id="btn-month" class="active" onclick="setPeriod('month')">Mês</button>
+        <button id="btn-year"  onclick="setPeriod('year')">Ano</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Items -->
+  <div class="card">
+    <div class="section-label">📋 Itens de Custo</div>
+
+    <div class="col-headers">
+      <span>Descrição</span>
+      <span>Valor</span>
+      <span>Moeda</span>
+      <span>Período</span>
+      <span></span>
+    </div>
+
+    <div id="items-list"></div>
+
+    <button class="btn-add" onclick="addItem()">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+      </svg>
+      Adicionar item
+    </button>
+  </div>
+
+  <!-- Team -->
+  <div class="card">
+    <div class="section-label">
+      👥 Equipe
+      <span class="team-badge" id="team-count">0</span>
+    </div>
+
+    <div class="team-col-headers">
+      <span>Nome</span>
+      <span>Cargo</span>
+      <span>Salário / mês</span>
+      <span></span>
+    </div>
+
+    <div id="team-list"></div>
+
+    <button class="btn-add" onclick="addMember()" style="border-color:rgba(63,185,80,0.3);margin-top:0.75rem">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+      </svg>
+      Adicionar membro
+    </button>
+
+    <div class="team-summary">
+      <span class="ts-label">💰 Total folha salarial / mês</span>
+      <span class="ts-value" id="team-total">R$ 0,00</span>
+    </div>
+  </div>
+
+  <!-- Capacity -->
+  <div class="card">
+    <div class="section-label">📷 Capacidade & Armazenamento</div>
+
+    <!-- editable inputs -->
+    <div class="cap-inputs">
+      <div class="cap-input-group">
+        <label>Câmeras suportadas · GPU</label>
+        <input type="number" id="cap-gpu-cams" value="28" min="1" oninput="calcCapacity()" />
+        <span class="unit">câmeras</span>
+      </div>
+      <div class="cap-input-group">
+        <label>Câmeras suportadas · VPS</label>
+        <input type="number" id="cap-vps-cams" value="80" min="1" oninput="calcCapacity()" />
+        <span class="unit">câmeras</span>
+      </div>
+      <div class="cap-input-group">
+        <label>Vídeos por mês</label>
+        <input type="number" id="cap-videos" value="800" min="0" oninput="calcCapacity()" />
+        <span class="unit">vídeos</span>
+      </div>
+      <div class="cap-input-group">
+        <label>Tamanho médio por vídeo</label>
+        <input type="number" id="cap-vid-size" value="0.75" min="0.01" step="0.05" oninput="calcCapacity()" />
+        <span class="unit">GB</span>
+      </div>
+    </div>
+
+    <!-- stat cards -->
+    <div class="cap-grid">
+      <div class="cap-stat gpu">
+        <span class="cs-icon">🎮</span>
+        <span class="cs-label">GPU · NVIDIA A4000</span>
+        <span class="cs-value" id="cap-gpu-val">28</span>
+        <span class="cs-sub" id="cap-gpu-sub">câmeras simultâneas<br>$0.25/h · 6h/dia</span>
+        <div class="cap-bar-wrap">
+          <div class="cap-bar-label">
+            <span>capacidade</span>
+            <span id="cap-gpu-pct">100%</span>
+          </div>
+          <div class="cap-bar-track"><div class="cap-bar-fill gpu" id="cap-gpu-bar" style="width:100%"></div></div>
+        </div>
+      </div>
+
+      <div class="cap-stat vps">
+        <span class="cs-icon">🖥️</span>
+        <span class="cs-label">VPS · KVM 8</span>
+        <span class="cs-value" id="cap-vps-val">80</span>
+        <span class="cs-sub" id="cap-vps-sub">câmeras simultâneas<br>R$ 119,99/mês</span>
+        <div class="cap-bar-wrap">
+          <div class="cap-bar-label">
+            <span>capacidade</span>
+            <span id="cap-vps-pct">100%</span>
+          </div>
+          <div class="cap-bar-track"><div class="cap-bar-fill vps" id="cap-vps-bar" style="width:100%"></div></div>
+        </div>
+      </div>
+
+      <div class="cap-stat stor">
+        <span class="cs-icon">💾</span>
+        <span class="cs-label">Armazenamento / mês</span>
+        <span class="cs-value" id="cap-stor-val">600 GB</span>
+        <span class="cs-sub" id="cap-stor-sub">800 vídeos × 0,75 GB<br>Backblaze $10/mês</span>
+        <div class="cap-bar-wrap">
+          <div class="cap-bar-label">
+            <span id="cap-stor-tb">0.59 TB</span>
+            <span id="cap-stor-pct-lbl">do plano 1 TB</span>
+          </div>
+          <div class="cap-bar-track"><div class="cap-bar-fill stor" id="cap-stor-bar" style="width:59%"></div></div>
+        </div>
+      </div>
+
+      <div class="cap-stat cam">
+        <span class="cs-icon">💰</span>
+        <span class="cs-label">Custo por câmera</span>
+        <span class="cs-value" id="cap-cost-cam">—</span>
+        <span class="cs-sub" id="cap-cost-sub">total ÷ câmeras totais<br>custo mensal estimado</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Totals -->
+  <div class="card">
+    <div class="section-label">📊 Resumo</div>
+    <div class="totals-grid" id="totals-grid">
+      <div class="total-card brl-card">
+        <span class="tc-label">Total em BRL</span>
+        <span class="tc-value" id="total-brl">R$ 0,00</span>
+        <span class="tc-sub" id="total-brl-sub">por mês</span>
+      </div>
+      <div class="total-card usd-card">
+        <span class="tc-label">Total em USD</span>
+        <span class="tc-value" id="total-usd">$ 0.00</span>
+        <span class="tc-sub" id="total-usd-sub">por mês</span>
+      </div>
+      <div class="total-card annual-card">
+        <span class="tc-label">Custo Anual</span>
+        <span class="tc-value" id="total-annual">R$ 0,00</span>
+        <span class="tc-sub">estimativa anual em BRL</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pricing -->
+  <div class="card" id="pricing-card">
+    <div class="section-label">💼 Precificação (Custo + Lucro + Imposto)</div>
+    <div class="totals-grid">
+      <div class="total-card" style="border-color:rgba(248,81,73,0.25)">
+        <span class="tc-label">Custo Base</span>
+        <span class="tc-value" id="price-cost" style="color:var(--text-muted)">R$ 0,00</span>
+        <span class="tc-sub" id="price-cost-sub">custo total mensal</span>
+      </div>
+      <div class="total-card" style="border-color:rgba(63,185,80,0.25)">
+        <span class="tc-label">+ Lucro (<span id="lbl-profit">10</span>%)</span>
+        <span class="tc-value" id="price-profit" style="color:var(--green)">R$ 0,00</span>
+        <span class="tc-sub" id="price-profit-sub">margem aplicada</span>
+      </div>
+      <div class="total-card" style="border-color:rgba(210,153,34,0.25)">
+        <span class="tc-label">+ Imposto (<span id="lbl-tax">15</span>%)</span>
+        <span class="tc-value" id="price-tax" style="color:var(--yellow)">R$ 0,00</span>
+        <span class="tc-sub" id="price-tax-sub">sobre o preço de venda</span>
+      </div>
+      <div class="total-card annual-card">
+        <span class="tc-label">Preço Final / mês</span>
+        <span class="tc-value" id="price-final">R$ 0,00</span>
+        <span class="tc-sub" id="price-final-sub">a cobrar do cliente</span>
+      </div>
+    </div>
+    <!-- per-camera pricing -->
+    <div style="margin-top:1rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:0.75rem">
+      <div class="cap-stat cam" style="border-color:rgba(188,140,255,0.3)">
+        <span class="cs-icon">📷</span>
+        <span class="cs-label">Preço por câmera/mês</span>
+        <span class="cs-value" id="price-per-cam" style="color:var(--purple)">—</span>
+        <span class="cs-sub" id="price-per-cam-sub">preço final ÷ câmeras totais</span>
+      </div>
+      <div class="cap-stat" style="border-color:rgba(47,129,247,0.25)">
+        <span class="cs-icon">📅</span>
+        <span class="cs-label">Preço final / ano</span>
+        <span class="cs-value" id="price-annual" style="color:var(--accent)">—</span>
+        <span class="cs-sub">preço final × 12 meses</span>
+      </div>
+      <div class="cap-stat" style="border-color:rgba(63,185,80,0.25)">
+        <span class="cs-icon">💵</span>
+        <span class="cs-label">Preço final em USD</span>
+        <span class="cs-value" id="price-usd" style="color:var(--green)">—</span>
+        <span class="cs-sub">convertido pelo câmbio atual</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Breakdown -->
+  <div class="card">
+    <div class="section-label">🔍 Detalhamento</div>
+    <div class="breakdown-list" id="breakdown-list"></div>
+  </div>
+
+</div>
+
+<script>
+  // ── State ──────────────────────────────────────────────
+  let period = 'month';
+  let itemCount = 0;
+  let memberCount = 0;
+
+  const defaultItems = [
+    { name: 'VPS: KVM 8',              value: 119.99, currency: 'BRL', freq: 'month' },
+    { name: 'GPU: NVIDIA A4000',        value: 0.25,   currency: 'USD', freq: 'hour', hDay: 6, days: 30  },
+    { name: 'Storage: Backblaze',       value: 10.00,  currency: 'USD', freq: 'month' },
+    { name: 'Storage GPU (10 GB)',      value: 1.00,   currency: 'USD', freq: 'month' },
+    { name: 'IP Público GPU',           value: 5.00,   currency: 'USD', freq: 'month' },
+  ];
+
+  const defaultTeam = [
+    { name: 'Dev Apoio / Manutenção', role: 'Desenvolvedor',        salary: 1500 },
+    { name: 'Secretaria / Suporte',    role: 'Suporte ao Cliente',   salary: 700  },
+  ];
+
+  // ── DOM refs ───────────────────────────────────────────
+  const listEl       = document.getElementById('items-list');
+  const teamListEl   = document.getElementById('team-list');
+  const rateEl       = document.getElementById('exchange-rate');
+  const totalBrlEl   = document.getElementById('total-brl');
+  const totalUsdEl   = document.getElementById('total-usd');
+  const totalAnnEl   = document.getElementById('total-annual');
+  const totalBrlSub  = document.getElementById('total-brl-sub');
+  const totalUsdSub  = document.getElementById('total-usd-sub');
+  const breakdownEl  = document.getElementById('breakdown-list');
+
+  // ── Helpers ────────────────────────────────────────────
+  const fmtBRL = v => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtUSD = v => '$ ' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  // Get total monthly hours for an hourly item (hDay * days)
+  function monthlyHours(rid) {
+    const hDayEl = document.getElementById('hday-' + rid);
+    const daysEl = document.getElementById('days-' + rid);
+    const hDay = hDayEl ? (parseFloat(hDayEl.value) || 0) : 24;
+    const days = daysEl ? (parseFloat(daysEl.value) || 0) : 30;
+    return hDay * days;
+  }
+
+  // Convert any value to monthly BRL
+  function toMonthlyBRL(value, currency, freq, rid) {
+    const rate = parseFloat(rateEl.value) || 7;
+    let monthly = value;
+    if (freq === 'hour')  monthly = value * (rid !== undefined ? monthlyHours(rid) : 720);
+    if (freq === 'year')  monthly = value / 12;
+    if (freq === 'day')   monthly = value * 30;
+    if (currency === 'USD') monthly *= rate;
+    return monthly;
+  }
+
+  function toMonthlyUSD(value, currency, freq, rid) {
+    const rate = parseFloat(rateEl.value) || 7;
+    let monthly = value;
+    if (freq === 'hour')  monthly = value * (rid !== undefined ? monthlyHours(rid) : 720);
+    if (freq === 'year')  monthly = value / 12;
+    if (freq === 'day')   monthly = value * 30;
+    if (currency === 'BRL') monthly /= rate;
+    return monthly;
+  }
+
+  // ── Toggle hour-row visibility ─────────────────────────
+  function onFreqChange(id) {
+    const freqEl = document.getElementById('freq-' + id);
+    const hourRow = document.getElementById('hrow-' + id);
+    if (!freqEl || !hourRow) return;
+    hourRow.classList.toggle('visible', freqEl.value === 'hour');
+    recalc();
+  }
+
+  // ── Update total hours display ─────────────────────────
+  function updateTotalHours(id) {
+    const totalEl = document.getElementById('htotal-' + id);
+    if (!totalEl) return;
+    const h = monthlyHours(id);
+    totalEl.textContent = h.toFixed(0) + ' h/mês';
+    recalc();
+  }
+
+  // ── Add item row ───────────────────────────────────────
+  function addItem(preset = {}) {
+    itemCount++;
+    const id = itemCount;
+    const isHour = preset.freq === 'hour';
+    const hDay = preset.hDay ?? 24;
+    const days = preset.days ?? 30;
+
+    // Use a wrapper div that groups the main row + hour sub-row
+    const wrap = document.createElement('div');
+    wrap.id = 'row-' + id;
+    wrap.style.cssText = 'display:flex;flex-direction:column;gap:0.35rem;';
+
+    // ── Main row ──
+    const mainRow = document.createElement('div');
+    mainRow.className = 'item-row';
+    mainRow.innerHTML = `
+      <input type="text"   id="name-${id}"  placeholder="Nome do item" value="${preset.name || ''}" oninput="recalc()" />
+      <input type="number" id="value-${id}" placeholder="0,00" value="${preset.value ?? ''}" step="0.01" min="0" oninput="recalc()" />
+      <select id="cur-${id}" onchange="recalc()">
+        <option value="BRL" ${preset.currency === 'BRL' ? 'selected' : ''}>🇧🇷 BRL</option>
+        <option value="USD" ${preset.currency === 'USD' ? 'selected' : ''}>🇺🇸 USD</option>
+      </select>
+      <select id="freq-${id}" class="period-select" onchange="onFreqChange(${id})">
+        <option value="hour"  ${preset.freq === 'hour'  ? 'selected' : ''}>/hora</option>
+        <option value="day"   ${preset.freq === 'day'   ? 'selected' : ''}>/dia</option>
+        <option value="month" ${!preset.freq || preset.freq === 'month' ? 'selected' : ''}>/mês</option>
+        <option value="year"  ${preset.freq === 'year'  ? 'selected' : ''}>/ano</option>
+      </select>
+      <button class="btn-remove" onclick="removeItem(${id})" title="Remover">✕</button>
+    `;
+
+    // ── Hour sub-row ──
+    const hourRow = document.createElement('div');
+    hourRow.id = 'hrow-' + id;
+    hourRow.className = 'hour-row' + (isHour ? ' visible' : '');
+    hourRow.innerHTML = `
+      <label>⏱ Horas/dia:</label>
+      <input type="number" id="hday-${id}" value="${hDay}" min="0" max="24" step="0.5" oninput="updateTotalHours(${id})" />
+      <label>Dias/mês:</label>
+      <input type="number" id="days-${id}" value="${days}" min="0" max="31" step="1" oninput="updateTotalHours(${id})" />
+      <label>=</label>
+      <span class="total-hours" id="htotal-${id}">${(hDay * days).toFixed(0)} h/mês</span>
+    `;
+
+    wrap.appendChild(mainRow);
+    wrap.appendChild(hourRow);
+    listEl.appendChild(wrap);
+    recalc();
+  }
+
+  function removeItem(id) {
+    const el = document.getElementById('row-' + id);
+    if (el) {
+      el.style.opacity = '0';
+      el.style.transform = 'translateX(8px)';
+      el.style.transition = 'all 0.15s';
+      setTimeout(() => { el.remove(); recalc(); }, 150);
+    }
+  }
+
+  // ── Team CRUD ──────────────────────────────────────────
+  const ROLES = ['Desenvolvedor', 'Suporte ao Cliente', 'Vendas', 'Marketing',
+                 'Designer', 'Gerente', 'Financeiro', 'RH', 'Operacional', 'Outro'];
+
+  function addMember(preset = {}) {
+    memberCount++;
+    const mid = memberCount;
+    const row = document.createElement('div');
+    row.className = 'team-row';
+    row.id = 'member-' + mid;
+
+    const roleOpts = ROLES.map(r =>
+      `<option value="${r}" ${preset.role === r ? 'selected' : ''}>${r}</option>`
+    ).join('');
+
+    row.innerHTML = `
+      <input type="text"   id="mname-${mid}"   placeholder="Nome do membro" value="${escHtml(preset.name || '')}" oninput="recalc()" />
+      <select id="mrole-${mid}" onchange="recalc()">${roleOpts}</select>
+      <input type="number" id="msalary-${mid}" placeholder="0,00" value="${preset.salary ?? ''}" step="50" min="0" oninput="recalc()" />
+      <button class="btn-remove" onclick="removeMember(${mid})" title="Remover">✕</button>
+    `;
+    teamListEl.appendChild(row);
+    recalc();
+  }
+
+  function removeMember(mid) {
+    const el = document.getElementById('member-' + mid);
+    if (el) {
+      el.style.opacity = '0';
+      el.style.transform = 'translateX(8px)';
+      el.style.transition = 'all 0.15s';
+      setTimeout(() => { el.remove(); recalc(); }, 150);
+    }
+  }
+
+  function getTeamTotal() {
+    let total = 0;
+    teamListEl.querySelectorAll('[id^="member-"]').forEach(row => {
+      const mid = row.id.replace('member-', '');
+      total += parseFloat(document.getElementById('msalary-' + mid)?.value) || 0;
+    });
+    return total;
+  }
+
+  // ── Period toggle ──────────────────────────────────────
+  function setPeriod(p) {
+    period = p;
+    document.getElementById('btn-month').classList.toggle('active', p === 'month');
+    document.getElementById('btn-year').classList.toggle('active',  p === 'year');
+    recalc();
+  }
+
+  // ── Recalculate ────────────────────────────────────────
+  function recalc() {
+    const rate = parseFloat(rateEl.value) || 7;
+    let totalBRL = 0;
+    let totalUSD = 0;
+    const rows = listEl.querySelectorAll('[id^="row-"]');
+    const items = [];
+
+    rows.forEach(row => {
+      const rid = row.id.replace('row-', '');
+      const nameEl  = document.getElementById('name-'  + rid);
+      const valEl   = document.getElementById('value-' + rid);
+      const curEl   = document.getElementById('cur-'   + rid);
+      const freqEl  = document.getElementById('freq-'  + rid);
+      if (!nameEl) return;
+
+      const name     = nameEl.value || 'Sem nome';
+      const value    = parseFloat(valEl.value) || 0;
+      const currency = curEl.value;
+      const freq     = freqEl.value;
+
+      const mBRL = toMonthlyBRL(value, currency, freq, rid);
+      const mUSD = toMonthlyUSD(value, currency, freq, rid);
+      totalBRL += mBRL;
+      totalUSD += mUSD;
+
+      let freqLabel = freq === 'hour'
+        ? `${monthlyHours(rid).toFixed(0)}h/mês`
+        : freq === 'day' ? '/dia' : freq === 'year' ? '/ano' : '/mês';
+      items.push({ name, mBRL, mUSD, currency, freqLabel });
+    });
+
+    // ── Add team salaries ──
+    const teamTotal = getTeamTotal();
+    if (teamTotal > 0) {
+      totalBRL += teamTotal;
+      totalUSD += teamTotal / rate;
+      items.push({ name: '👥 Folha Salarial', mBRL: teamTotal, mUSD: teamTotal / rate, currency: 'BRL', freqLabel: '/mês' });
+    }
+
+    // Update team UI
+    const memberRows = teamListEl.querySelectorAll('[id^="member-"]');
+    document.getElementById('team-count').textContent = memberRows.length;
+    document.getElementById('team-total').textContent = fmtBRL(teamTotal);
+
+    // Apply period multiplier
+    const mult = period === 'year' ? 12 : 1;
+    const label = period === 'year' ? 'por ano' : 'por mês';
+
+    totalBrlEl.textContent = fmtBRL(totalBRL * mult);
+    totalUsdEl.textContent = fmtUSD(totalUSD * mult);
+    totalAnnEl.textContent = fmtBRL(totalBRL * 12);
+    totalBrlSub.textContent = label;
+    totalUsdSub.textContent = label;
+
+    // Breakdown
+    breakdownEl.innerHTML = '';
+    if (items.length === 0) {
+      breakdownEl.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;padding:0.5rem 0.75rem">Nenhum item adicionado.</div>';
+      return;
+    }
+
+    items.sort((a, b) => b.mBRL - a.mBRL);
+    items.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'breakdown-item';
+      const pct = totalBRL > 0 ? ((item.mBRL / totalBRL) * 100).toFixed(1) : '0.0';
+      div.innerHTML = `
+        <span class="bi-name">
+          ${escHtml(item.name)}
+          <span style="font-size:0.7rem;color:var(--text-muted);margin-left:0.4rem;">(${item.freqLabel})</span>
+        </span>
+        <span style="display:flex;align-items:center;gap:0.75rem">
+          <span class="bi-val">${fmtUSD(item.mUSD * mult)}</span>
+          <span class="bi-brl">${fmtBRL(item.mBRL * mult)}</span>
+          <span style="font-size:0.72rem;color:var(--text-muted);min-width:38px;text-align:right">${pct}%</span>
+        </span>
+      `;
+      breakdownEl.appendChild(div);
+    });
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Capacity Calculator ────────────────────────────────
+  function calcCapacity() {
+    const gpuCams  = parseFloat(document.getElementById('cap-gpu-cams').value)  || 0;
+    const vpsCams  = parseFloat(document.getElementById('cap-vps-cams').value)  || 0;
+    const videos   = parseFloat(document.getElementById('cap-videos').value)    || 0;
+    const vidSize  = parseFloat(document.getElementById('cap-vid-size').value)  || 0;
+    const rate     = parseFloat(rateEl.value) || 7;
+
+    // Storage
+    const storGB   = videos * vidSize;
+    const storTB   = storGB / 1000;
+    const bbPlanTB = 1; // Backblaze base plan ~1 TB
+    const storPct  = Math.min((storGB / (bbPlanTB * 1000)) * 100, 100);
+
+    // Camera bars — relative to the larger of the two
+    const maxCams  = Math.max(gpuCams, vpsCams, 1);
+    const gpuPct   = (gpuCams / maxCams) * 100;
+    const vpsPct   = (vpsCams / maxCams) * 100;
+
+    // Cost per camera (use latest totals from recalc — read from DOM)
+    const totalBRLmonthly = parseBRL(document.getElementById('total-brl').textContent);
+    const totalCams = gpuCams + vpsCams;
+    const costPerCam = totalCams > 0 ? totalBRLmonthly / totalCams : 0;
+
+    // Update GPU stat
+    document.getElementById('cap-gpu-val').textContent    = gpuCams;
+    document.getElementById('cap-gpu-sub').innerHTML      = `câmeras simultâneas<br>$0,25/h · 6h/dia`;
+    document.getElementById('cap-gpu-pct').textContent    = gpuPct.toFixed(0) + '%';
+    document.getElementById('cap-gpu-bar').style.width    = gpuPct + '%';
+
+    // Update VPS stat
+    document.getElementById('cap-vps-val').textContent    = vpsCams;
+    document.getElementById('cap-vps-sub').innerHTML      = `câmeras simultâneas<br>R$ 119,99/mês`;
+    document.getElementById('cap-vps-pct').textContent    = vpsPct.toFixed(0) + '%';
+    document.getElementById('cap-vps-bar').style.width    = vpsPct + '%';
+
+    // Update Storage stat
+    const storLabel = storGB >= 1000
+      ? (storTB).toFixed(2) + ' TB'
+      : storGB.toFixed(0)   + ' GB';
+    document.getElementById('cap-stor-val').textContent   = storLabel;
+    document.getElementById('cap-stor-sub').innerHTML     = `${videos} vídeos × ${vidSize} GB<br>Backblaze $10/mês`;
+    document.getElementById('cap-stor-tb').textContent    = storTB.toFixed(2) + ' TB';
+    document.getElementById('cap-stor-pct-lbl').textContent = 'do plano 1 TB';
+    document.getElementById('cap-stor-bar').style.width   = storPct + '%';
+
+    // Update cost per camera
+    if (totalCams > 0) {
+      document.getElementById('cap-cost-cam').textContent  = fmtBRL(costPerCam);
+      document.getElementById('cap-cost-sub').innerHTML   =
+        `total ÷ ${totalCams} câmeras<br>custo mensal estimado`;
+    } else {
+      document.getElementById('cap-cost-cam').textContent  = '—';
+    }
+  }
+
+  // parse "R$ 1.234,56" → number
+  function parseBRL(str) {
+    return parseFloat(str.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+  }
+
+  // ── Pricing Calculator ─────────────────────────────────
+  function calcPricing() {
+    const profitPct = parseFloat(document.getElementById('profit-pct').value) || 0;
+    const taxPct    = parseFloat(document.getElementById('tax-pct').value)    || 0;
+    const rate      = parseFloat(rateEl.value) || 7;
+    const mult      = period === 'year' ? 12 : 1;
+
+    // Read current cost from DOM (already calculated by recalc)
+    const costBRL = parseBRL(document.getElementById('total-brl').textContent);
+
+    // Preço de venda antes do imposto: custo / (1 - imposto%) * (1 + lucro%)
+    // Fórmula: preço_venda = custo × (1 + lucro%) / (1 - imposto%)
+    const taxFrac    = taxPct / 100;
+    const profitFrac = profitPct / 100;
+    const salePrice  = taxFrac < 1 ? (costBRL * (1 + profitFrac)) / (1 - taxFrac) : 0;
+    const profitVal  = costBRL * profitFrac;
+    const taxVal     = salePrice - costBRL - profitVal;
+
+    // Camera count
+    const gpuCams = parseFloat(document.getElementById('cap-gpu-cams').value) || 0;
+    const vpsCams = parseFloat(document.getElementById('cap-vps-cams').value) || 0;
+    const totalCams = gpuCams + vpsCams;
+
+    // Update labels
+    document.getElementById('lbl-profit').textContent = profitPct;
+    document.getElementById('lbl-tax').textContent    = taxPct;
+
+    // Update totals
+    document.getElementById('price-cost').textContent       = fmtBRL(costBRL * mult);
+    document.getElementById('price-cost-sub').textContent   = period === 'year' ? 'custo total anual' : 'custo total mensal';
+    document.getElementById('price-profit').textContent     = fmtBRL(profitVal * mult);
+    document.getElementById('price-profit-sub').textContent = `+ ${fmtBRL(profitVal)} por mês`;
+    document.getElementById('price-tax').textContent        = fmtBRL(taxVal * mult);
+    document.getElementById('price-tax-sub').textContent    = `${taxPct}% sobre o preço de venda`;
+    document.getElementById('price-final').textContent      = fmtBRL(salePrice * mult);
+    document.getElementById('price-final-sub').textContent  = period === 'year' ? 'a cobrar por ano' : 'a cobrar por mês';
+
+    // Per-camera price
+    if (totalCams > 0) {
+      document.getElementById('price-per-cam').textContent     = fmtBRL(salePrice / totalCams);
+      document.getElementById('price-per-cam-sub').textContent = `preço final ÷ ${totalCams} câmeras/mês`;
+    } else {
+      document.getElementById('price-per-cam').textContent = '—';
+    }
+    document.getElementById('price-annual').textContent = fmtBRL(salePrice * 12);
+    document.getElementById('price-usd').textContent    = fmtUSD(salePrice / rate);
+  }
+
+  // ── Init ───────────────────────────────────────────────
+  rateEl.addEventListener('input', () => { recalc(); calcCapacity(); calcPricing(); });
+  document.getElementById('profit-pct').addEventListener('input', calcPricing);
+  document.getElementById('tax-pct').addEventListener('input',    calcPricing);
+  document.getElementById('cap-gpu-cams').addEventListener('input', () => { calcCapacity(); calcPricing(); });
+  document.getElementById('cap-vps-cams').addEventListener('input', () => { calcCapacity(); calcPricing(); });
+  defaultItems.forEach(i => addItem(i));
+  defaultTeam.forEach(m => addMember(m));
+  // hook recalc to also update capacity + pricing
+  const _origRecalc = recalc;
+  recalc = function() { _origRecalc(); calcCapacity(); calcPricing(); };
+  calcCapacity();
+  calcPricing();
+</script>
+</body>
+</html>
